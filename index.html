@@ -55,6 +55,9 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 .who{display:none;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:700}
 .lnk{padding:8px 12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-size:13px;font-weight:700;flex:0 0 auto}
 .lnk.pri{background:var(--a);border-color:var(--a);color:#fff}
+.net{background:var(--mine);border:2px solid #b8921f;border-radius:10px;padding:12px;font-weight:700;font-size:14px;line-height:1.4;margin-bottom:10px}
+.loading{padding:28px 12px;text-align:center;font-weight:700;opacity:.7}
+[hidden]{display:none!important}
 .hint{margin-top:8px;font-size:12px;opacity:.7;line-height:1.35}
 .mach{display:flex;gap:8px;margin-bottom:8px}
 .mach button{flex:1;padding:12px;border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-weight:700;font-size:16px}
@@ -148,6 +151,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
  <button data-p="2">Пралка 2<small class="loc">(біля вікна)</small><small id="pc2"></small></button>
 </div>
 <div class="days" id="days"></div>
+<div class="net" id="net" hidden>⏳ Зараз багато людей одночасно. Розклад з'явиться сам за хвилину, не закривай сторінку.</div>
 <div id="slots"></div>
 <div class="msg" id="msg" role="status"></div>
 
@@ -189,14 +193,17 @@ const DAYS=30;
 const $=id=>document.getElementById(id);
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const wd=["нд","пн","вт","ср","чт","пт","сб"];
-let sel=0,data={},db=null,USER=null,pick=null,busyBook=false;
+let sel=0,data={},db=null,USER=null,pick=null,busyBook=false,loaded=false,conn=false,netT=null;
+/* якщо база не відповідає 6 с (забагато людей одночасно) — показуємо напис */
+function netCheck(){clearTimeout(netT);if(conn||!db){$('net').hidden=true;return}netT=setTimeout(()=>{if(!conn&&online)$('net').hidden=false},6000)}
 let M=ls.get('mach')==='f'?'f':'m';
 let P=ls.get('pr')==='2'?'2':'1';
 const MN={m:'Хлопці',f:'Дівчата'};
 const MK=()=>M+P;
-const LOC={'1':'біля входу','2':'біля вікна'};
-function machName(mk){const p=mk[1]||'1';return MN[mk[0]]+', пралка '+p+' ('+LOC[p]+')'}
+const LOC={m:{'1':'біля входу','2':'біля вікна'},f:{'1':'біля дверей №1','2':'біля дверей №2'}};
+function machName(mk){const p=mk[1]||'1';return MN[mk[0]]+', пралка '+p+' ('+LOC[mk[0]][p]+')'}
 function drawMach(){document.body.dataset.m=M;
+ document.querySelectorAll('#pr button').forEach(b=>{b.querySelector('.loc').textContent='('+LOC[M][b.dataset.p]+')'});
  document.querySelectorAll('#mach button').forEach(b=>b.classList.toggle('on',b.dataset.m===M));
  document.querySelectorAll('#pr button').forEach(b=>b.classList.toggle('on',b.dataset.p===P))}
 document.querySelectorAll('#mach button').forEach(b=>b.onclick=()=>{M=b.dataset.m;ls.set('mach',M);pick=null;drawMach();drawSlots()});
@@ -259,6 +266,7 @@ function slotsWord(n){const a=n%10,b=n%100;return n+' '+(a===1&&b!==11?'віль
 let lastView='';
 function drawSlots(){
  const box=$('slots');box.innerHTML='';
+ if(db&&!loaded){box.innerHTML='<div class="loading">Завантажую розклад…</div>';$('pc1').textContent=$('pc2').textContent='…';drawBar();return}
  const dk=dayKey(sel),nowM=nowMin(),mk=MK();
  const B=build();let firstFree=null;
  for(const p of ['1','2'])$('pc'+p).textContent=slotsWord(freeCount(B,M+p,dk));
@@ -355,6 +363,7 @@ function cancel(keys){if(typeof goOn==='function')goOn();Promise.all(keys.map(k=
 async function book(){
  if(busyBook||!pick)return;
  if(!db)return say('Немає зв\'язку з базою.',true);
+ if(!loaded)return say('Розклад ще завантажується. Спробуй за хвилину.',true);
  if(!USER)return say('Спочатку увійди через Google.',true);
  const name=$('nm').value.trim();
  if(name.length<3){$('nm').focus();return say('Спочатку впиши, хто ти (група, прізвище, ім\'я).',true)}
@@ -492,12 +501,13 @@ else{
  firebase.initializeApp(CONFIG);db=firebase.database();
  var online=true,idleT;
  function goOff(){if(db&&online){db.goOffline();online=false}}
- function goOn(){if(db&&!online){db.goOnline();online=true}clearTimeout(idleT);idleT=setTimeout(goOff,60000)}
+ function goOn(){if(db&&!online){db.goOnline();online=true}clearTimeout(idleT);idleT=setTimeout(goOff,30000);netCheck()}
  document.addEventListener('visibilitychange',()=>{if(document.hidden)goOff();else goOn()});
  ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>window.addEventListener(ev,goOn,{passive:true}));
  goOn();
  firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush()});
- db.ref('slots').on('value',snap=>{data=snap.val()||{};drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
+ db.ref('.info/connected').on('value',s=>{conn=!!s.val();netCheck()});
+ db.ref('slots').on('value',snap=>{data=snap.val()||{};loaded=true;drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
 }
 setInterval(drawSlots,60000);
 </script>

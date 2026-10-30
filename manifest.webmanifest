@@ -1,0 +1,17 @@
+{
+  "name": "Запис на прання",
+  "short_name": "Прання",
+  "description": "Запис курсантів на прання: 2 пралки для хлопців і 2 для дівчат.",
+  "lang": "uk",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef3f6",
+  "theme_color": "#1f6f9f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

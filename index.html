@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Запис на прання</title>
+<meta name="theme-color" content="#1f6f9f">
+<meta name="description" content="Запис курсантів на прання: 2 пралки для хлопців і 2 для дівчат.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Прання">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{--bg:#eef3f6;--ink:#14293a;--card:#fff;--free:#d9f0e3;--freeb:#2a9d6f;--busy:#f6dcd5;--busyb:#c8553d;--mine:#fde9a8;--a:#1f6f9f;--line:#cbd7df}
+body[data-m=m]{--fbg:var(--free);--fb:var(--freeb);--bbg:var(--busy);--bb:var(--busyb);--mc:#1f6f9f;--selbg:#1f6f9f}
+body[data-m=f]{--fbg:#fde4f0;--fb:#d6529a;--bbg:#f3a9cc;--bb:#c23585;--mc:#d6529a;--selbg:#d6529a;--bg:#fcebf4}
+@media (prefers-color-scheme:dark){:root{--bg:#10191f;--ink:#e6eef3;--card:#1b2830;--free:#1d3a2e;--busy:#43241d;--mine:#4a4020;--a:#6fb1d6;--line:#34444e}
+body[data-m=f]{--fbg:#35192a;--fb:#ee7ab8;--bbg:#6b2b52;--bb:#ee7ab8;--mc:#ee7ab8;--selbg:#d6529a;--bg:#1f121a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:520px;margin:0 auto;padding:16px 16px 100px;padding-top:max(16px,env(safe-area-inset-top))}
+h1{font-size:24px;margin:4px 0 4px}
+.sub{margin:0 0 14px;font-size:14px;opacity:.8}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+label{font-weight:700;font-size:14px}
+input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border-radius:10px;font:inherit;background:var(--bg);color:var(--ink)}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px}
+.day{flex:0 0 auto;padding:8px 12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-size:14px;text-align:center}
+.day.on{border-color:var(--a);background:var(--a);color:#fff}
+.t{font-weight:700}
+.msg{min-height:22px;font-weight:700;font-size:14px}
+.err{background:var(--busy);padding:12px;border-radius:10px;font-size:14px;line-height:1.45}
+.saved{margin-top:8px;font-size:13px;font-weight:700;color:var(--freeb);min-height:18px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
+.ov.on{display:flex}
+.dlg{background:var(--card);color:var(--ink);border-radius:14px;padding:20px;max-width:380px;width:100%}
+.dlg h2{margin:0 0 8px;font-size:19px}
+.dlg p{margin:0 0 16px;font-size:15px;line-height:1.4}
+.dlg ol{margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.5}
+.dlg ol li{margin-bottom:6px}
+.dlg .row{display:flex;gap:8px}
+.dlg button{flex:1;padding:12px;border-radius:10px;border:2px solid var(--ink);font:inherit;font-weight:700}
+.dlg .no{background:var(--card);color:var(--ink)}
+.dlg .yes{background:var(--busyb);border-color:var(--busyb);color:#fff}
+.dlg .go{background:var(--a);border-color:var(--a);color:#fff}
+.ico{display:inline-flex;vertical-align:-4px;width:20px;height:20px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;font-size:15px;opacity:0;transition:.25s;z-index:40;max-width:90%;text-align:center;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.bad{background:var(--busyb);color:#fff}
+.gbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 14px;border:0;background:#1a73e8;color:#fff;border-radius:10px;font:inherit;font-weight:700;font-size:16px}
+.gbtn .gi{background:#fff;border-radius:6px;width:32px;height:32px;padding:6px;display:flex;flex:0 0 auto}
+.gbtn .gi svg{width:100%;height:100%}
+.who{display:none;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.lnk{padding:8px 12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-size:13px;font-weight:700;flex:0 0 auto}
+.lnk.pri{background:var(--a);border-color:var(--a);color:#fff}
+.hint{margin-top:8px;font-size:12px;opacity:.7;line-height:1.35}
+.mach{display:flex;gap:8px;margin-bottom:8px}
+.mach button{flex:1;padding:12px;border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-weight:700;font-size:16px}
+.mach.pr button{padding:9px 8px;font-size:15px;border-color:var(--line);line-height:1.2}
+.mach.pr button small{display:block;font-weight:400;font-size:12px;opacity:.75;margin-top:2px}
+.mach.pr{margin-bottom:12px}
+:focus-visible{outline:3px solid var(--a);outline-offset:2px}
+
+.mach button.on{background:var(--ink);color:var(--bg)}
+.mach button[data-m=f].on{background:#d6529a;border-color:#d6529a;color:#fff}
+.mach.pr button.on{background:var(--mc);border-color:var(--mc);color:#fff}
+.slot{display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px;padding:12px;margin-bottom:8px;border-radius:10px;border:2px solid;font:inherit;text-align:left;color:var(--ink)}
+.slot .t{font-weight:700;white-space:nowrap}
+.slot .w{font-size:14px;text-align:right;word-break:break-word;line-height:1.3}
+.slot.free{background:var(--fbg);border-color:var(--fb)}
+.slot.busy{background:var(--bbg);border-color:var(--bb)}
+.slot.busy .w{font-weight:700;font-size:16px}
+.slot.mine{background:var(--mine);border-color:#b8921f}
+.slot.mine .w{font-weight:700;font-size:16px}
+.slot.past{opacity:.55}
+.slot.sel{background:var(--selbg);border-color:var(--ink);color:#fff}
+.slot.sel .w{font-weight:700}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--mc);padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:none;z-index:15}
+.bar.on{display:block}
+.bar .in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:8px}
+.bar .txt{flex:1;font-weight:700;font-size:15px;line-height:1.25}
+.bar .txt small{display:block;font-weight:400;opacity:.7;font-size:12px}
+.bar button{padding:12px 16px;border-radius:10px;font:inherit;font-weight:700;border:2px solid var(--mc)}
+.bar .ok{background:var(--mc);color:#fff}
+.bar .x{background:var(--card);color:var(--ink);border-color:var(--line)}
+
+.inst{display:none;align-items:center;gap:10px;background:var(--card);border:2px solid var(--a);border-radius:12px;padding:10px 10px 10px 12px;margin-bottom:12px}
+.inst.on{display:flex}
+.inst img{width:40px;height:40px;border-radius:9px;flex:0 0 auto}
+.inst .it{flex:1;font-size:13px;line-height:1.3}
+.inst .it b{display:block;font-size:15px}
+.inst .ix{border:0;background:none;color:var(--ink);font-size:24px;line-height:1;padding:4px 6px;opacity:.6}
+.nrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.nrow .hint{margin-top:4px}
+.mine-h{font-weight:700;font-size:15px;margin-bottom:8px}
+.mi{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.mi:first-of-type{border-top:0}
+.mi .go{flex:1;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;line-height:1.3;padding:0}
+.mi .go b{display:block;font-size:15px}
+</style>
+</head>
+<body data-m="m">
+<h1>Запис на прання</h1>
+<p class="sub">Обери пралку й день, потім натисни початок і кінець часу (наприклад 13:30 і 14:30 = з 13:30 до 15:00). Один слот = 30 хв.</p>
+
+<div class="inst" id="inst" role="region" aria-label="Встановлення">
+ <img src="icon-192.png" alt="">
+ <div class="it"><b>Встанови програму</b><span id="inst-t">Іконка на екрані й нагадування про прання</span></div>
+ <button class="lnk pri" id="inst-b">Встановити</button>
+ <button class="ix" id="inst-x" aria-label="Закрити">×</button>
+</div>
+
+<div class="err" id="setup" style="display:none">Сайт ще не підключено до бази. Встав свою адресу Firebase у змінну <b>CONFIG</b> на початку скрипта.</div>
+
+<div class="card">
+ <button class="gbtn" id="login"><span class="gi"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span><span>Увійти через Google</span></button>
+ <div class="who" id="who"><span id="who-t"></span><button class="lnk" id="logout">Вийти</button></div>
+ <div class="hint" id="login-hint">Записуватися й скасовувати запис можна після входу. Якщо вхід не працює, відкрий посилання в Safari або Chrome (не в Telegram чи Viber).</div>
+</div>
+
+<div class="card" id="ntf" style="display:none">
+ <div class="nrow">
+  <div><b>🔔 Нагадування</b><div class="hint" id="ntf-t"></div></div>
+  <button class="lnk pri" id="ntf-b">Увімкнути</button>
+ </div>
+</div>
+
+<div class="card">
+ <label for="nm">Хто ти (група, прізвище, ім'я)</label>
+ <input id="nm" maxlength="60" placeholder="Група, прізвище, ім'я" autocomplete="name">
+ <div class="saved" id="saved"></div>
+</div>
+
+<div class="card" id="mine" style="display:none">
+ <div class="mine-h">Мої записи</div>
+ <div id="mine-l"></div>
+</div>
+
+<div class="mach" id="mach" role="group" aria-label="Прання">
+ <button data-m="m">Прання хлопців</button>
+ <button data-m="f">Прання дівчат</button>
+</div>
+<div class="mach pr" id="pr" role="group" aria-label="Пралка">
+ <button data-p="1">Пралка 1<small id="pc1"></small></button>
+ <button data-p="2">Пралка 2<small id="pc2"></small></button>
+</div>
+<div class="days" id="days"></div>
+<div id="slots"></div>
+<div class="msg" id="msg" role="status"></div>
+
+<div class="ov" id="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-h">
+ <h2 id="dlg-h">Скасувати запис?</h2>
+ <p id="dlg-t"></p>
+ <div class="row"><button class="no" id="dlg-no">Залишити</button><button class="yes" id="dlg-yes">Скасувати запис</button></div>
+</div></div>
+
+<div class="ov" id="iov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="idlg-h">
+ <h2 id="idlg-h">Як встановити</h2>
+ <div id="idlg-b"></div>
+ <div class="row"><button class="go" id="idlg-ok">Зрозуміло</button></div>
+</div></div>
+
+<div class="bar" id="bar"><div class="in"><div class="txt" id="bar-t"></div><button class="x" id="bar-x">Скинути</button><button class="ok" id="bar-ok">Записати</button></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* ===== Дані Firebase (публічні) ===== */
+const CONFIG={
+  apiKey:"AIzaSyD_1MPnFR4t0n8W-Ww-iy4AefH7qQDYp1w",
+  authDomain:"prannya-d1864.firebaseapp.com",
+  databaseURL:"https://prannya-d1864-default-rtdb.firebaseio.com",
+  projectId:"prannya-d1864",
+  appId:"1:341849446296:web:ab5f6d134b4c54e7a77ded"
+};
+/* ===== Сервер сповіщень (Cloudflare) ===== */
+const PUSH_URL="https://prannya-push.xeufqs.workers.dev";
+const VAPID_PUB="BKNKwGZ6_owyucUHiAOggVUiDLTF-0t37zHuMMA0AZU2nKx0qbfuWD0mhRvyIHL91IzP7vQxkA2drPikSnAv4os";
+/* ====================================== */
+
+const STEP=30;
+const OPEN=6*60+30,CLOSE=21*60; // запис з 06:30 до 21:00
+const DAYS=30;
+const $=id=>document.getElementById(id);
+const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+const wd=["нд","пн","вт","ср","чт","пт","сб"];
+let sel=0,data={},db=null,USER=null,pick=null,busyBook=false;
+let M=ls.get('mach')==='f'?'f':'m';
+let P=ls.get('pr')==='2'?'2':'1';
+const MN={m:'Хлопці',f:'Дівчата'};
+const MK=()=>M+P;
+function machName(mk){return MN[mk[0]]+', пралка '+(mk[1]||'1')}
+function drawMach(){document.body.dataset.m=M;
+ document.querySelectorAll('#mach button').forEach(b=>b.classList.toggle('on',b.dataset.m===M));
+ document.querySelectorAll('#pr button').forEach(b=>b.classList.toggle('on',b.dataset.p===P))}
+document.querySelectorAll('#mach button').forEach(b=>b.onclick=()=>{M=b.dataset.m;ls.set('mach',M);pick=null;drawMach();drawSlots()});
+document.querySelectorAll('#pr button').forEach(b=>b.onclick=()=>{P=b.dataset.p;ls.set('pr',P);pick=null;drawMach();drawSlots()});
+
+$('nm').value=ls.get('nm')||'';
+function showSaved(){const v=$('nm').value.trim();$('saved').textContent=v.length>=3?'✓ Збережено: '+v:''}
+$('nm').addEventListener('input',()=>{ls.set('nm',$('nm').value.trim());showSaved()});
+$('nm').addEventListener('change',()=>{if($('nm').value.trim().length>=3)say('✓ Ім\'я збережено')});
+showSaved();
+
+function dayKey(off){const d=new Date();d.setDate(d.getDate()+off);
+ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function dayLabel(off){const d=new Date();d.setDate(d.getDate()+off);
+ return (off===0?'сьогодні':off===1?'завтра':wd[d.getDay()])+'<br>'+d.getDate()+'.'+String(d.getMonth()+1).padStart(2,'0')}
+function dayOff(dk){const [y,m,d]=dk.split('-').map(Number);const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(y,m-1,d)-t)/864e5)}
+let tt;
+function say(t,bad){$('msg').textContent=t;$('msg').style.color=bad?'var(--busyb)':'var(--freeb)';
+ const el=$('toast');el.textContent=t;el.className='toast on'+(bad?' bad':'');clearTimeout(tt);tt=setTimeout(()=>{el.className='toast'},3200)}
+
+/* ---- час ---- */
+const p2=n=>String(n).padStart(2,'0');
+function fmt(m){return p2(Math.floor(m/60))+':'+p2(m%60)}
+function code(m){return p2(Math.floor(m/60))+p2(m%60)}
+function dur(a,b){const t=b-a,h=Math.floor(t/60),mm=t%60;return (h?h+' год ':'')+(mm?mm+' хв':'')}
+function shortDate(dk){return dk.split('-').reverse().slice(0,2).join('.')}
+
+/* ---- нормалізація даних: кожен запис -> 30-хв слоти.
+   Пралки: m1, m2, f1, f2. Старі записи "m"/"f" = пралка 1; старі 2-год записи теж підтримуються ---- */
+function build(){
+ const slots={},groups={};
+ Object.keys(data).forEach(k=>{
+  const s=data[k];if(!s)return;
+  const parts=k.split('_');if(parts.length<3)return;
+  let mach=parts[0];const dk=parts[1],suf=parts[2];
+  if(mach==='m'||mach==='f')mach+='1';
+  let starts=[];
+  if(suf.length<=2){const h=parseInt(suf,10);if(isNaN(h))return;for(let i=0;i<4;i++)starts.push(h*60+i*STEP)}
+  else{const m=parseInt(suf.slice(0,2),10)*60+parseInt(suf.slice(2),10);if(isNaN(m))return;starts.push(m)}
+  const gid=suf.length<=2?'L'+k:mach+'_'+dk+'_'+(s.uid||'')+'_'+(s.ts||k);
+  const g=groups[gid]||(groups[gid]={keys:[],a:1e9,b:0,dk:dk,mach:mach,uid:s.uid});
+  g.keys.push(k);
+  starts.forEach(m=>{slots[mach+'_'+dk+'_'+m]={s:s,gid:gid};g.a=Math.min(g.a,m);g.b=Math.max(g.b,m+STEP)});
+ });
+ return{slots,groups};
+}
+
+function drawDays(){
+ $('days').innerHTML='';
+ for(let i=0;i<DAYS;i++){const b=document.createElement('button');b.className='day'+(i===sel?' on':'');b.innerHTML=dayLabel(i);
+  b.onclick=()=>{sel=i;pick=null;drawDays();drawSlots()};$('days').appendChild(b)}
+}
+function nowMin(){const n=new Date();return n.getHours()*60+n.getMinutes()}
+function freeCount(B,mk,dk){
+ const nm=nowMin();let c=0;
+ for(let m=OPEN;m<CLOSE;m+=STEP){if(sel===0&&nm>=m+STEP)continue;if(!B.slots[mk+'_'+dk+'_'+m])c++}
+ return c;
+}
+function slotsWord(n){const a=n%10,b=n%100;return n+' '+(a===1&&b!==11?'вільний':a>=2&&a<=4&&(b<12||b>14)?'вільні':'вільних')}
+let lastView='';
+function drawSlots(){
+ const box=$('slots');box.innerHTML='';
+ const dk=dayKey(sel),nowM=nowMin(),mk=MK();
+ const B=build();let firstFree=null;
+ for(const p of ['1','2'])$('pc'+p).textContent=slotsWord(freeCount(B,M+p,dk));
+ for(let m=OPEN;m<CLOSE;m+=STEP){
+  const e=m+STEP;
+  const e0=B.slots[mk+'_'+dk+'_'+m];
+  const past=sel===0&&nowM>=e;
+  const b=document.createElement('button');
+  const time=fmt(m)+' – '+fmt(e);
+  if(e0){
+   const mine=!!USER&&e0.s.uid===USER.uid;
+   b.className='slot '+(mine?'mine':'busy')+(past?' past':'');
+   b.innerHTML='<span class="t">'+time+'</span><span class="w"></span>';
+   b.querySelector('.w').textContent=mine?'✓ '+e0.s.name+' (твій)':(e0.s.name||'без імені');
+   b.onclick=()=>{if(past)say('Цей час уже минув: '+(e0.s.name||'без імені'));else if(mine)askCancel(B.groups[e0.gid]);else say('Цей час зайнятий: '+(e0.s.name||'без імені'),true)};
+  }else{
+   const on=pick&&m>=pick.a&&m<=pick.b;
+   b.className='slot free'+(on?' sel':'')+(past?' past':'');
+   b.innerHTML='<span class="t">'+time+'</span><span class="w">'+(on?'✓ обрано':'вільно')+'</span>';
+   b.onclick=()=>tap(m,past,B);
+   if(!past&&firstFree===null)firstFree=b;
+  }
+  box.appendChild(b);
+ }
+ drawBar();drawMine(B);
+ const view=dk+mk;
+ if(view!==lastView){lastView=view;if(sel===0&&firstFree)setTimeout(()=>firstFree.scrollIntoView({block:'start'}),0)}
+}
+function drawBar(){
+ const bar=$('bar');
+ if(!pick){bar.classList.remove('on');return}
+ $('bar-t').innerHTML=fmt(pick.a)+' – '+fmt(pick.b+STEP)+'<small>'+shortDate(dayKey(sel))+' · '+machName(MK())+' · '+dur(pick.a,pick.b+STEP)+'</small>';
+ bar.classList.add('on');
+}
+/* ---- мої записи (на всіх пралках) ---- */
+function drawMine(B){
+ const box=$('mine'),l=$('mine-l');
+ if(!USER){box.style.display='none';return}
+ const today=dayKey(0),nm=nowMin();
+ const my=Object.values(B.groups).filter(g=>g.uid===USER.uid&&(g.dk>today||(g.dk===today&&g.b>nm))).sort((x,y)=>x.dk<y.dk?-1:x.dk>y.dk?1:x.a-y.a);
+ if(!my.length){box.style.display='none';return}
+ box.style.display='block';l.innerHTML='';
+ my.forEach(g=>{
+  const off=dayOff(g.dk);
+  const row=document.createElement('div');row.className='mi';
+  const go=document.createElement('button');go.className='go';
+  go.innerHTML='<b></b><span></span>';
+  go.querySelector('b').textContent=(off===0?'Сьогодні':off===1?'Завтра':shortDate(g.dk))+', '+fmt(g.a)+' – '+fmt(g.b);
+  go.querySelector('span').textContent=machName(g.mach);
+  go.onclick=()=>{if(off>=0&&off<DAYS){sel=off;M=g.mach[0];P=g.mach[1];ls.set('mach',M);ls.set('pr',P);pick=null;lastView='';drawMach();drawDays();drawSlots();$('mach').scrollIntoView({behavior:'smooth'})}};
+  const x=document.createElement('button');x.className='lnk';x.textContent='Скасувати';x.onclick=()=>askCancel(g);
+  row.appendChild(go);row.appendChild(x);l.appendChild(row);
+ });
+}
+function tap(m,past,B){
+ if(!USER)return say('Спочатку увійди через Google.',true);
+ if(past)return say('Цей час уже минув.',true);
+ const dk=dayKey(sel),mk=MK();
+ if(!pick){pick={a:m,b:m}}
+ else if(pick.a===pick.b&&m!==pick.a){
+  const lo=Math.min(pick.a,m),hi=Math.max(pick.a,m);
+  let ok=true;
+  for(let x=lo;x<=hi;x+=STEP){if(B.slots[mk+'_'+dk+'_'+x]){ok=false;break}}
+  if(!ok){say('Між цими часами є зайнятий слот.',true);pick={a:m,b:m}}
+  else pick={a:lo,b:hi};
+ }
+ else if(pick.a===pick.b&&m===pick.a){pick=null}
+ else pick={a:m,b:m};
+ drawSlots();
+}
+$('bar-x').onclick=()=>{pick=null;drawSlots()};
+$('bar-ok').onclick=()=>book();
+
+/* автоочищення: кожен курсант при вході видаляє СВОЇ записи старші за 3 дні (чужі видалити правила не дозволяють) */
+const cleaned={};
+function cleanOld(){
+ if(!db||!USER)return;
+ const lim=dayKey(-3);
+ Object.keys(data).forEach(k=>{
+  const s=data[k],parts=k.split('_');
+  if(!s||parts.length<3||cleaned[k])return;
+  if(parts[1]<lim&&s.uid===USER.uid){cleaned[k]=1;db.ref('slots/'+k).remove().catch(()=>{})}
+ });
+}
+
+/* ---- скасування ---- */
+let pend=null;
+function askCancel(g){pend=g.keys;$('dlg-t').textContent=shortDate(g.dk)+', '+fmt(g.a)+' – '+fmt(g.b)+' ('+machName(g.mach)+')';$('ov').classList.add('on')}
+$('dlg-no').onclick=()=>{pend=null;$('ov').classList.remove('on')};
+$('dlg-yes').onclick=()=>{const k=pend;pend=null;$('ov').classList.remove('on');if(k)cancel(k)};
+function cancel(keys){if(typeof goOn==='function')goOn();Promise.all(keys.map(k=>db.ref('slots/'+k).remove())).then(()=>say('Запис скасовано')).catch(e=>say('Не вдалося скасувати: це не твій запис або немає входу.',true))}
+
+/* ---- бронювання діапазону ---- */
+async function book(){
+ if(busyBook||!pick)return;
+ if(!db)return say('Немає зв\'язку з базою.',true);
+ if(!USER)return say('Спочатку увійди через Google.',true);
+ const name=$('nm').value.trim();
+ if(name.length<3){$('nm').focus();return say('Спочатку впиши, хто ти (група, прізвище, ім\'я).',true)}
+ const dk=dayKey(sel),ts=Date.now(),a=pick.a,b=pick.b,mach=MK();
+ if(a<OPEN||b+STEP>CLOSE)return say('Запис можливий лише з 06:30 до 21:00.',true);
+ const keys=[];for(let m=a;m<=b;m+=STEP)keys.push(mach+'_'+dk+'_'+code(m));
+ busyBook=true;$('bar-ok').disabled=true;if(typeof goOn==='function')goOn();
+ const done=[];let fail=null;
+ try{
+  for(const k of keys){
+   const r=await db.ref('slots/'+k).transaction(cur=>cur?undefined:{name:name,uid:USER.uid,ts:ts},undefined,false);
+   if(!r.committed){fail='taken';break}
+   done.push(k);
+  }
+ }catch(e){fail=e.message||'error'}
+ if(fail){
+  await Promise.all(done.map(k=>db.ref('slots/'+k).remove().catch(()=>{})));
+  say(fail==='taken'?'Хтось щойно встиг раніше. Обери інший час.':/permission/i.test(fail)?'База не дозволила запис. Онови правила Firebase (інструкція в адміна).':'Помилка запису: '+fail,true);
+ }else{
+  pick=null;
+  say('✓ Записано: '+shortDate(dk)+', '+fmt(a)+' – '+fmt(b+STEP)+' ('+machName(mach)+')');
+ }
+ busyBook=false;$('bar-ok').disabled=false;drawSlots();
+}
+
+/* ===== Програма на телефон ===== */
+const UA=navigator.userAgent;
+const isIOS=/iPad|iPhone|iPod/.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=/Android/i.test(UA);
+const inApp=/Telegram|Viber|Instagram|FBAN|FBAV|Line\/|TikTok|musical_ly|; wv\)/i.test(UA);
+const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+let deferred=null,swReg=null;
+const SHARE='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+function drawInst(){
+ const el=$('inst');
+ const hid=+(ls.get('instHide')||0);
+ if(standalone||Date.now()<hid){el.classList.remove('on');return}
+ if(inApp){$('inst-t').textContent='Спершу відкрий це посилання в '+(isIOS?'Safari':'Chrome')+' (⋯ → «Відкрити в браузері»)';$('inst-b').textContent='Як?'}
+ else{$('inst-t').textContent='Іконка на екрані й нагадування про прання';$('inst-b').textContent='Встановити'}
+ el.classList.add('on');
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;drawInst()});
+window.addEventListener('appinstalled',()=>{deferred=null;$('inst').classList.remove('on');say('✓ Програму встановлено')});
+$('inst-x').onclick=()=>{ls.set('instHide',String(Date.now()+3*864e5));$('inst').classList.remove('on')};
+$('inst-b').onclick=async()=>{
+ if(deferred&&!inApp){deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;return}
+ let h;
+ if(inApp)h='<p>Ти відкрив сайт усередині месенджера, а звідти встановити не можна.</p><ol><li>Натисни <b>⋯</b> або <b>⋮</b> у куті екрана.</li><li>Обери <b>«Відкрити в браузері»</b> ('+(isIOS?'Safari':'Chrome')+').</li><li>Там натисни «Встановити» ще раз.</li></ol>';
+ else if(isIOS)h='<ol><li>Натисни кнопку <b>«Поділитися»</b> '+SHARE+' внизу Safari (або вгорі на iPad).</li><li>Прокрути вниз і обери <b>«На екран "Додому"»</b>.</li><li>Натисни <b>«Додати»</b>.</li><li>Відкривай прання з іконки на екрані, і там увімкни нагадування.</li></ol>';
+ else if(isAndroid)h='<ol><li>Натисни <b>⋮</b> вгорі праворуч у Chrome.</li><li>Обери <b>«Встановити застосунок»</b> або <b>«Додати на головний екран»</b>.</li><li>Підтвердь «Встановити».</li></ol>';
+ else h='<ol><li>У Chrome або Edge натисни значок встановлення в адресному рядку (монітор зі стрілкою) або меню <b>⋮</b> → «Встановити».</li><li>Підтвердь «Встановити».</li></ol>';
+ $('idlg-b').innerHTML=h;$('iov').classList.add('on');
+};
+$('idlg-ok').onclick=()=>$('iov').classList.remove('on');
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('sw.js').then(r=>{swReg=r;drawNtf();syncPush()}).catch(()=>{});
+}
+drawInst();
+
+/* ===== Нагадування (push) ===== */
+const pushOK=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+function b64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+async function getSub(){try{const r=swReg||(navigator.serviceWorker&&await navigator.serviceWorker.getRegistration());return r?await r.pushManager.getSubscription():null}catch(e){return null}}
+async function drawNtf(){
+ const c=$('ntf'),t=$('ntf-t'),b=$('ntf-b');
+ if(!USER){c.style.display='none';return}
+ c.style.display='block';b.disabled=false;
+ if(!pushOK){
+  b.style.display='none';
+  t.textContent=isIOS&&!standalone?'На iPhone нагадування працюють тільки з програми: встанови її на головний екран (кнопка «Встановити» вгорі) і ввімкни їх там.':'Цей браузер не підтримує нагадування. Відкрий сайт у Chrome або Safari.';
+  return;
+ }
+ if(Notification.permission==='denied'){b.style.display='none';t.textContent='Сповіщення заборонені. Дозволь їх у налаштуваннях телефона для цієї програми чи сайту.';return}
+ const s=await getSub();
+ const on=!!s&&Notification.permission==='granted'&&ls.get('push')===USER.uid;
+ b.style.display='';b.textContent=on?'Вимкнути':'Увімкнути';b.classList.toggle('pri',!on);b.dataset.on=on?'1':'';
+ t.textContent=on?'✓ Увімкнено: за 10 хв до прання і коли треба забрати речі.':'За 10 хв до прання і коли прання закінчиться (забрати речі).';
+}
+async function sendSub(s,test){
+ const token=await USER.getIdToken();
+ const r=await fetch(PUSH_URL+'/sub',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,sub:s.toJSON(),test:!!test})});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok||!j.ok)throw new Error(j.error||('status '+(j.status||r.status)));
+ ls.set('push',USER.uid);
+}
+async function enablePush(){
+ const b=$('ntf-b');
+ let perm;
+ try{perm=await Notification.requestPermission()}catch(e){perm=Notification.permission}
+ if(perm!=='granted'){drawNtf();return say('Без дозволу нагадування не прийдуть.',true)}
+ b.disabled=true;b.textContent='Вмикаю…';
+ try{
+  const reg=swReg||await navigator.serviceWorker.ready;
+  let s=await reg.pushManager.getSubscription();
+  if(!s)s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+  await sendSub(s,true);
+  say('✓ Нагадування увімкнено');
+ }catch(e){say('Не вдалося ввімкнути нагадування. Спробуй ще раз пізніше.',true)}
+ drawNtf();
+}
+async function disablePush(){
+ const s=await getSub();
+ if(s){try{await fetch(PUSH_URL+'/unsub',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({endpoint:s.endpoint})})}catch(e){}try{await s.unsubscribe()}catch(e){}}
+ ls.del('push');
+}
+$('ntf-b').onclick=async()=>{
+ if($('ntf-b').dataset.on){$('ntf-b').disabled=true;await disablePush();say('Нагадування вимкнено');drawNtf()}
+ else enablePush();
+};
+/* після входу тихо оновлюємо підписку на сервері (якщо людина її вже вмикала) */
+async function syncPush(){
+ if(!USER||!pushOK||Notification.permission!=='granted'||ls.get('push')!==USER.uid)return;
+ const s=await getSub();if(!s)return;
+ try{await sendSub(s,false)}catch(e){}
+}
+
+drawMach();drawDays();drawSlots();
+function updAuth(){
+ $('login').style.display=USER?'none':'flex';
+ $('who').style.display=USER?'flex':'none';
+ $('login-hint').style.display=USER?'none':'block';
+ if(USER)$('who-t').textContent='Ти ввійшов: '+(USER.displayName||USER.email);
+ drawSlots();drawNtf();
+}
+$('login').onclick=()=>{
+ const pr=new firebase.auth.GoogleAuthProvider();
+ firebase.auth().signInWithPopup(pr).catch(e=>{
+  if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')firebase.auth().signInWithRedirect(pr);
+  else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request')say('Не вдалося увійти. Відкрий посилання в Safari або Chrome.',true);
+ });
+};
+$('logout').onclick=async()=>{if(ls.get('push'))await disablePush();firebase.auth().signOut()};
+if(!CONFIG.apiKey){$('setup').style.display='block'}
+else{
+ firebase.initializeApp(CONFIG);db=firebase.database();
+ var online=true,idleT;
+ function goOff(){if(db&&online){db.goOffline();online=false}}
+ function goOn(){if(db&&!online){db.goOnline();online=true}clearTimeout(idleT);idleT=setTimeout(goOff,60000)}
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)goOff();else goOn()});
+ ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>window.addEventListener(ev,goOn,{passive:true}));
+ goOn();
+ firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush()});
+ db.ref('slots').on('value',snap=>{data=snap.val()||{};drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
+}
+setInterval(drawSlots,60000);
+</script>
+<script data-goatcounter="https://prannya-kursant.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body>
+</html>

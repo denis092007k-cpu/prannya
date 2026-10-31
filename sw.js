@@ -1,5 +1,5 @@
 /* Прання: офлайн-кеш і нагадування */
-const C = 'prannya-v1';
+const C = 'prannya-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));
@@ -11,6 +11,13 @@ self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET') return;
   const u = new URL(r.url);
+  if (u.hostname === 'www.gstatic.com' && u.pathname.startsWith('/firebasejs/')) {   // бібліотека Firebase (версія в адресі не змінюється)
+    e.respondWith(caches.match(r).then(m => m || fetch(r).then(res => {
+      if (res.ok || res.type === 'opaque') { const cp = res.clone(); caches.open(C).then(c => c.put(r, cp)); }
+      return res;
+    })));
+    return;
+  }
   if (u.origin !== location.origin) return;           // Firebase, Google, лічильник: напряму
   if (r.mode === 'navigate') {                         // сторінка: спершу свіжа з мережі
     e.respondWith(fetch(r).then(res => {

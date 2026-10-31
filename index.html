@@ -7,6 +7,8 @@
 <meta name="theme-color" content="#1f6f9f">
 <meta name="description" content="Запис курсантів на прання: 2 пралки для хлопців і 2 для дівчат.">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://prannya-d1864-default-rtdb.firebaseio.com">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -56,6 +58,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 .lnk{padding:8px 12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-size:13px;font-weight:700;flex:0 0 auto}
 .lnk.pri{background:var(--a);border-color:var(--a);color:#fff}
 .net{background:var(--mine);border:2px solid #b8921f;border-radius:10px;padding:12px;font-weight:700;font-size:14px;line-height:1.4;margin-bottom:10px}
+.upd{font-size:13px;font-weight:700;opacity:.7;margin:0 0 8px}
 .loading{padding:28px 12px;text-align:center;font-weight:700;opacity:.7}
 [hidden]{display:none!important}
 .hint{margin-top:8px;font-size:12px;opacity:.7;line-height:1.35}
@@ -151,6 +154,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
  <button data-p="2">Пралка 2<small class="loc">(біля вікна)</small><small id="pc2"></small></button>
 </div>
 <div class="days" id="days"></div>
+<div class="upd" id="upd" hidden>⟳ Оновлюю розклад…</div>
 <div class="net" id="net" hidden>⏳ Зараз багато людей одночасно. Розклад з'явиться сам за хвилину, не закривай сторінку.</div>
 <div id="slots"></div>
 <div class="msg" id="msg" role="status"></div>
@@ -193,9 +197,11 @@ const DAYS=30;
 const $=id=>document.getElementById(id);
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const wd=["нд","пн","вт","ср","чт","пт","сб"];
-let sel=0,data={},db=null,USER=null,pick=null,busyBook=false,loaded=false,conn=false,netT=null;
+let sel=0,data={},db=null,USER=null,pick=null,busyBook=false,loaded=false,conn=false,netT=null,cached=false;
+/* останній розклад з телефона: показуємо одразу, поки вантажиться свіжий */
+try{const c=JSON.parse(ls.get('slotsCache')||'null');if(c&&typeof c==='object'){data=c;cached=true}}catch(e){}
 /* якщо база не відповідає 6 с (забагато людей одночасно) — показуємо напис */
-function netCheck(){clearTimeout(netT);if(conn||!db){$('net').hidden=true;return}netT=setTimeout(()=>{if(!conn&&online)$('net').hidden=false},6000)}
+function netCheck(){clearTimeout(netT);if(conn||!db){$('net').hidden=true;return}netT=setTimeout(()=>{if(!conn&&online)$('net').hidden=false},12000)}
 let M=ls.get('mach')==='f'?'f':'m';
 let P=ls.get('pr')==='2'?'2':'1';
 const MN={m:'Хлопці',f:'Дівчата'};
@@ -266,7 +272,8 @@ function slotsWord(n){const a=n%10,b=n%100;return n+' '+(a===1&&b!==11?'віль
 let lastView='';
 function drawSlots(){
  const box=$('slots');box.innerHTML='';
- if(db&&!loaded){box.innerHTML='<div class="loading">Завантажую розклад…</div>';$('pc1').textContent=$('pc2').textContent='…';drawBar();return}
+ $('upd').hidden=!(db&&!loaded&&cached);
+ if(db&&!loaded&&!cached){box.innerHTML='<div class="loading">Завантажую розклад…</div>';$('pc1').textContent=$('pc2').textContent='…';drawBar();return}
  const dk=dayKey(sel),nowM=nowMin(),mk=MK();
  const B=build();let firstFree=null;
  for(const p of ['1','2'])$('pc'+p).textContent=slotsWord(freeCount(B,M+p,dk));
@@ -323,6 +330,7 @@ function drawMine(B){
 }
 function tap(m,past,B){
  if(!USER)return say('Спочатку увійди через Google.',true);
+ if(db&&!loaded)return say('Зачекай секунду, оновлюю розклад…',true);
  if(past)return say('Цей час уже минув.',true);
  const dk=dayKey(sel),mk=MK();
  if(!pick){pick={a:m,b:m}}
@@ -507,7 +515,7 @@ else{
  goOn();
  firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush()});
  db.ref('.info/connected').on('value',s=>{conn=!!s.val();netCheck()});
- db.ref('slots').on('value',snap=>{data=snap.val()||{};loaded=true;drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
+ db.ref('slots').on('value',snap=>{data=snap.val()||{};loaded=true;ls.set('slotsCache',JSON.stringify(data));drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
 }
 setInterval(drawSlots,60000);
 </script>

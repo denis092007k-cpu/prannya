@@ -106,9 +106,21 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 .mi:first-of-type{border-top:0}
 .mi .go{flex:1;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;line-height:1.3;padding:0}
 .mi .go b{display:block;font-size:15px}
-.mstat{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:14px;font-weight:700;line-height:1.35}
-.mstat.run{border-color:var(--a)}.mstat.free{border-color:var(--freeb)}.mstat.pause{border-color:#b8921f}
-.mstat small{display:block;font-weight:400;opacity:.75;font-size:12px}
+.mstat{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.mstat .ic{flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:21px;background:var(--bg)}
+.mstat .tx{min-width:0}.mstat .tt{display:block;font-size:17px;font-weight:800;line-height:1.25}
+.mstat .s1{display:block;font-size:15px;font-weight:600;margin-top:1px}
+.mstat small{display:block;font-weight:400;opacity:.7;font-size:12px;margin-top:3px}
+.mstat.run{border-left-color:var(--a)}.mstat.free{border-left-color:var(--freeb)}.mstat.pause{border-left-color:#b8921f}
+.mstat.run .ic{background:rgba(31,111,159,.18)}.mstat.free .ic{background:rgba(42,157,111,.2)}.mstat.pause .ic{background:rgba(184,146,31,.25)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bell{position:relative;flex:none;width:46px;height:46px;border-radius:50%;border:2px solid var(--line);background:var(--card);font-size:21px;line-height:1;padding:0;cursor:pointer}
+.bell .bd{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--busyb);color:#fff;font:700 12px/20px system-ui;text-align:center;padding:0 5px}
+.ib{max-height:55vh;overflow:auto;margin:0 0 14px;-webkit-overflow-scrolling:touch}
+.ib .it2{padding:10px 0;border-bottom:1px solid var(--line)}.ib .it2:last-child{border:0}
+.ib .it2 b{display:block;font-size:15px}.ib .it2 span{display:block;font-size:14px;line-height:1.35;margin-top:2px}.ib .it2 small{display:block;font-size:12px;opacity:.65;margin-top:3px}
+.ib .it2.nw b::after{content:"нове";margin-left:8px;font-size:11px;background:var(--a);color:#fff;border-radius:8px;padding:1px 7px;vertical-align:middle}
+.ib .em{padding:18px 4px;text-align:center;opacity:.75;font-size:15px;line-height:1.4}
 .mw{font-size:13px;line-height:1.4;background:var(--mine);color:var(--ink);border:1px solid #b8921f;border-radius:8px;padding:8px 10px;margin:2px 0 8px}
 .mw .lnk{display:block;width:100%;margin-top:6px;font-size:14px;padding:10px}
 /* ---- анімований гід встановлення ---- */
@@ -177,7 +189,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 </style>
 </head>
 <body data-m="m">
-<h1>Запис на прання</h1>
+<div class="hrow"><h1>Запис на прання</h1><button class="bell" id="bell" aria-label="Сповіщення">🔔<span class="bd" id="bd" hidden></span></button></div>
 <p class="sub">Обери пралку й день, потім натисни початок і кінець часу (наприклад 13:30 і 14:30 = з 13:30 до 15:00). Один слот = 30 хв.</p>
 
 <div class="inst" id="inst" role="region" aria-label="Встановлення">
@@ -232,6 +244,12 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
  <h2 id="dlg-h">Скасувати запис?</h2>
  <p id="dlg-t"></p>
  <div class="row"><button class="no" id="dlg-no">Залишити</button><button class="yes" id="dlg-yes">Скасувати запис</button></div>
+</div></div>
+
+<div class="ov" id="bov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="bdlg-h">
+ <h2 id="bdlg-h">Сповіщення</h2>
+ <div class="ib" id="ib"></div>
+ <div class="row"><button class="go" id="bdlg-ok">Закрити</button></div>
 </div></div>
 
 <div class="ov" id="iov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="idlg-h">
@@ -318,8 +336,8 @@ function build(){
   let starts=[];
   if(suf.length<=2){const h=parseInt(suf,10);if(isNaN(h))return;for(let i=0;i<4;i++)starts.push(h*60+i*STEP)}
   else{const m=parseInt(suf.slice(0,2),10)*60+parseInt(suf.slice(2),10);if(isNaN(m))return;starts.push(m)}
-  const gid=suf.length<=2?'L'+k:mach+'_'+dk+'_'+(s.uid||'')+'_'+(s.ts||k);
-  const g=groups[gid]||(groups[gid]={keys:[],a:1e9,b:0,dk:dk,mach:mach,uid:s.uid});
+  const gid=suf.length<=2?'L'+k:mach+'_'+dk+'_'+(s.uid||'')+(s.hold?'_H':'')+'_'+(s.ts||k);
+  const g=groups[gid]||(groups[gid]={keys:[],a:1e9,b:0,dk:dk,mach:mach,uid:s.uid,hold:!!s.hold});
   g.keys.push(k);
   starts.forEach(m=>{slots[mach+'_'+dk+'_'+m]={s:s,gid:gid};g.a=Math.min(g.a,m);g.b=Math.max(g.b,m+STEP)});
  });
@@ -356,7 +374,7 @@ function drawSlots(){
    const mine=!!USER&&e0.s.uid===USER.uid;
    b.className='slot '+(mine?'mine':'busy')+(past?' past':'');
    b.innerHTML='<span class="t">'+time+'</span><span class="w"></span>';
-   b.querySelector('.w').textContent=mine?'✓ '+e0.s.name+' (твій)':(e0.s.name||'без імені');
+   b.querySelector('.w').textContent=e0.s.hold?(mine?'↩ резерв (твій): повернеться, якщо пралка звільниться':'🔒 зарезервовано'):mine?'✓ '+e0.s.name+' (твій)':(e0.s.name||'без імені');
    b.onclick=()=>{if(past)say('Цей час уже минув: '+(e0.s.name||'без імені'));else if(mine)askCancel(B.groups[e0.gid]);else say('Цей час зайнятий: '+(e0.s.name||'без імені'),true)};
   }else{
    const on=pick&&m>=pick.a&&m<=pick.b;
@@ -391,68 +409,40 @@ function drawMine(B){
   const go=document.createElement('button');go.className='go';
   go.innerHTML='<b></b><span></span>';
   go.querySelector('b').textContent=(off===0?'Сьогодні':off===1?'Завтра':shortDate(g.dk))+', '+fmt(g.a)+' – '+fmt(g.b);
-  go.querySelector('span').textContent=machName(g.mach);
+  go.querySelector('span').textContent=machName(g.mach)+(g.hold?' · резерв: повернеться, якщо пралка звільниться вчасно':'');
   go.onclick=()=>{if(off>=0&&off<DAYS){sel=off;M=g.mach[0];P=g.mach[1];ls.set('mach',M);ls.set('pr',P);pick=null;lastView='';drawMach();drawDays();drawSlots();$('mach').scrollIntoView({behavior:'smooth'})}};
   const x=document.createElement('button');x.className='lnk';x.textContent='Скасувати';x.onclick=()=>askCancel(g);
   row.appendChild(go);row.appendChild(x);l.appendChild(row);
-  const mv=moveInfo(B,g);
-  if(mv){
+  const di=delayInfo(B,g);
+  if(di){
    const w=document.createElement('div');w.className='mw';
-   const st=msFor(g.mach);
-   w.appendChild(document.createTextNode('⚠ Пралка '+(st&&st.state==='pause'?'на паузі':'ще працює')+', вільна орієнтовно о '+fmt(mv.fin)+'. Твій час '+fmt(g.a)+' не встигне.'));
-   if(mv.T!=null){
-    const bt=document.createElement('button');bt.className='lnk pri';bt.textContent='Перенести на '+fmt(mv.T)+' – '+fmt(mv.T+(g.b-g.a));
-    let armed=false,tm=null;
-    bt.onclick=()=>{
-     if(!armed){armed=true;bt.textContent='Підтвердити: '+fmt(mv.T)+' – '+fmt(mv.T+(g.b-g.a));clearTimeout(tm);tm=setTimeout(()=>{armed=false;bt.textContent='Перенести на '+fmt(mv.T)+' – '+fmt(mv.T+(g.b-g.a))},5000);return}
-     moveBooking(g,mv.T);
-    };
-    w.appendChild(bt);
-   }else w.appendChild(document.createTextNode(' Сьогодні вільного часу після цього немає: обери інший день або скасуй запис.'));
+   const st=msFor(g.mach),len=g.b-g.a;
+   w.textContent='⏳ Пралка '+(st&&st.state==='pause'?'на паузі':'ще працює')+', вільна орієнтовно о '+fmt(di.fin)+'. '+(di.bump?'Це надто пізно: твій запис буде автоматично перенесено на завтра.':'Твоє прання зсувається: '+fmt(di.start)+' – '+fmt(di.start+len)+' (було '+fmt(g.a)+' – '+fmt(g.b)+').');
    l.appendChild(w);
   }
  });
 }
 
-/* ---- перенесення запису, коли пралка не встигає ---- */
-const ceil30=m=>Math.ceil(m/STEP)*STEP;
-function moveInfo(B,g){
- if(g.dk!==dayKey(0))return null;
+/* ---- пралка не встигає: зсув часу (до 60 хв) або перенесення на завтра, ті самі правила, що на сервері ---- */
+const DMAX=60;
+function delayInfo(B,g){
+ if(g.dk!==dayKey(0)||g.hold)return null;
  const st=msFor(g.mach);
  if(!st||(st.state!=='run'&&st.state!=='pause')||!st.finish)return null;
- const fin=msMin(st.finish),nm=nowMin();
+ const fin=msMin(st.finish),nm=nowMin(),sm=st.since?msMin(st.since):null;
  const isLegacy=x=>String(x.keys[0]).split('_')[2].length<=2;
- const gs=Object.values(B.groups).filter(x=>x.mach===g.mach&&x.dk===g.dk&&x.b>nm).sort((x,y)=>x.a-y.a);
- const conf=gs.filter(x=>x.a>nm&&x.a<fin-1&&!isLegacy(x));
- if(!conf.some(x=>x.keys[0]===g.keys[0]))return null;
- const occ=new Set();
- gs.forEach(x=>{if(!conf.includes(x))for(let m=x.a;m<x.b;m+=STEP)occ.add(m)});
- let pos=ceil30(fin),T=null;
- for(const x of conf){
-  const len=x.b-x.a;let t=pos,found=null;
-  while(t+len<=CLOSE){let ok=true;for(let m=t;m<t+len;m+=STEP)if(occ.has(m)){ok=false;break}if(ok){found=t;break}t+=STEP}
-  if(found!==null){for(let m=found;m<found+len;m+=STEP)occ.add(m);pos=found+len}
-  if(x.keys[0]===g.keys[0]){T=found;break}
+ const gs=Object.values(B.groups).filter(x=>x.mach===g.mach&&x.dk===g.dk&&!x.hold).sort((x,y)=>x.a-y.a);
+ let cur=fin;
+ for(const x of gs){
+  if(x.b<=nm)continue;
+  if(!(nm<x.a||(sm!==null&&sm<x.a-3)))continue;
+  const start=Math.max(x.a,cur),delay=start-x.a;
+  const bump=delay>DMAX&&st.state==='run'&&!isLegacy(x);
+  if(x===g)return delay>=2?{fin:fin,start:start,delay:delay,bump:bump}:null;
+  if(bump)continue;
+  cur=start+(x.b-x.a);
  }
- if(T!==null&&T<g.b)T=null; // перекриття зі старим записом: безпечно перенести не можна
- return{fin,T};
-}
-let moving=false;
-async function moveBooking(g,T){
- if(moving||!db||!USER)return;moving=true;if(typeof goOn==='function')goOn();
- const len=g.b-g.a,ts=Date.now();
- const name=(data[g.keys[0]]&&data[g.keys[0]].name)||$('nm').value.trim()||'без імені';
- const nk=[];for(let m=T;m<T+len;m+=STEP)nk.push(g.mach+'_'+g.dk+'_'+code(m));
- const done=[];let fail=null;
- try{for(const k of nk){const r=await db.ref('slots/'+k).transaction(cur=>cur?undefined:{name:name,uid:USER.uid,ts:ts},undefined,false);if(!r.committed){fail='taken';break}done.push(k)}}catch(e){fail=e.message||'error'}
- if(fail){
-  await Promise.all(done.map(k=>db.ref('slots/'+k).remove().catch(()=>{})));
-  say(fail==='taken'?'Цей час щойно зайняли. Спробуй ще раз.':'Не вдалося перенести запис.',true);
- }else{
-  try{await Promise.all(g.keys.map(k=>db.ref('slots/'+k).remove()));say('✓ Перенесено на '+fmt(T)+' – '+fmt(T+len))}
-  catch(e){say('Новий запис створено, але старий не видалився. Скасуй його вручну.',true)}
- }
- moving=false;drawSlots();
+ return null;
 }
 function tap(m,past,B){
  if(!USER)return say('Спочатку увійди через Google.',true);
@@ -700,7 +690,7 @@ else{
  document.addEventListener('visibilitychange',()=>{if(document.hidden)goOff();else goOn()});
  ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>window.addEventListener(ev,goOn,{passive:true}));
  goOn();
- firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush()});
+ firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush();fetchInbox()});
  db.ref('.info/connected').on('value',s=>{conn=!!s.val();netCheck()});
  db.ref('slots').on('value',snap=>{data=snap.val()||{};loaded=true;ls.set('slotsCache',JSON.stringify(data));drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
 }
@@ -713,21 +703,52 @@ function busyMin(){const s=msFor(MK());return s&&(s.state==='run'||s.state==='pa
 function drawStat(){
  const el=$('mstat'),s=sel===0?msFor(MK()):null;
  if(!s){el.hidden=true;return}
- let t,sm='',c;
- if(s.state==='run'){c='run';t='🔵 Зараз працює'+(s.finish?': вільна о '+fmt(msMin(s.finish)):'');if(s.finish)sm='ще '+Math.max(0,Math.round((s.finish-Date.now())/60000))+' хв'}
- else if(s.state==='pause'){c='pause';t='⏸ На паузі';if(s.finish)sm='орієнтовно до '+fmt(msMin(s.finish))}
- else{c='free';t='🟢 Зараз не працює'+(s.door==='open'?' · двері відкриті':'')}
+ let ic,t,s1='',c;
+ const left=s.finish?Math.max(0,Math.round((s.finish-Date.now())/60000)):0;
+ const lt=left>=60?Math.floor(left/60)+' год '+(left%60?left%60+' хв':''):left+' хв';
+ if(s.state==='run'){c='run';ic='🫧';t='Пралка працює';if(s.finish)s1='Звільниться о '+fmt(msMin(s.finish))+' · ще '+lt}
+ else if(s.state==='pause'){c='pause';ic='⏸';t='Пралка на паузі';if(s.finish)s1='Орієнтовно звільниться о '+fmt(msMin(s.finish))}
+ else{c='free';ic='✅';t='Пралка вільна';s1=s.door==='open'?'Двері відкриті, можна забирати речі':'Можна починати прання'}
  el.className='mstat '+c;
- el.innerHTML='<span></span><small></small>';el.firstChild.textContent=t;
- const u='дані пралки, оновлено '+fmt(msMin(s.t));el.lastChild.textContent=sm?sm+' · '+u:u;
+ el.innerHTML='<span class="ic"></span><div class="tx"><span class="tt"></span><span class="s1"></span><small></small></div>';
+ el.querySelector('.ic').textContent=ic;el.querySelector('.tt').textContent=t;el.querySelector('.s1').textContent=s1;el.querySelector('.s1').hidden=!s1;
+ el.querySelector('small').textContent='Дані пралки, оновлено '+fmt(msMin(s.t));
  el.hidden=false;
 }
+/* ===== Сповіщення з програми (дзвіночок) ===== */
+let INBOX=[];
+function seenT(){return +(ls.get('inboxSeen')||0)}
+function drawBell(){
+ const n=INBOX.filter(x=>x.t>seenT()).length,bd=$('bd');
+ bd.hidden=!n;bd.textContent=n>9?'9+':String(n);
+}
+async function fetchInbox(){
+ if(!USER){INBOX=[];drawBell();return}
+ try{
+  const token=await USER.getIdToken();
+  const r=await fetch(PUSH_URL+'/inbox',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token})});
+  const j=await r.json();if(j&&j.ok&&Array.isArray(j.items)){INBOX=j.items;drawBell();if($('bov').style.display==='flex')drawInbox()}
+ }catch(e){}
+}
+function ago(t){const m=Math.round((Date.now()-t)/60000);if(m<1)return'щойно';if(m<60)return m+' хв тому';const d=new Date(t);return fmt(d.getHours()*60+d.getMinutes())+(new Date().toDateString()===d.toDateString()?'':', '+d.getDate()+'.'+(d.getMonth()+1))}
+function drawInbox(){
+ const box=$('ib');box.innerHTML='';const seen=seenT();
+ if(!USER){box.innerHTML='<div class="em">Увійди через Google, і тут з\'являться сповіщення про твоє прання.</div>';return}
+ if(!INBOX.length){box.innerHTML='<div class="em">Поки нічого немає. Тут будуть нагадування, пауза, перенесення запису й інші повідомлення від програми.</div>';return}
+ INBOX.forEach(x=>{const d=document.createElement('div');d.className='it2'+(x.t>seen?' nw':'');
+  d.innerHTML='<b></b><span></span><small></small>';d.querySelector('b').textContent=x.title;d.querySelector('span').textContent=x.body;d.querySelector('small').textContent=ago(x.t);box.appendChild(d)});
+}
+$('bell').onclick=async()=>{$('bov').style.display='flex';drawInbox();await fetchInbox();drawInbox();
+ if(INBOX.length){ls.set('inboxSeen',String(Math.max.apply(null,INBOX.map(x=>x.t))));drawBell()}};
+$('bdlg-ok').onclick=()=>{$('bov').style.display='none';drawInbox();drawBell()};
+$('bov').onclick=e=>{if(e.target===$('bov'))$('bdlg-ok').onclick()};
 async function fetchMS(){
  try{const r=await fetch(PUSH_URL+'/machines');const j=await r.json();if(j&&j.ok&&j.m){MS=j.m;drawSlots()}}catch(e){}
 }
 ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>window.addEventListener(ev,()=>{lastAct=Date.now()},{passive:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchMS()});
-setInterval(()=>{if(!document.hidden&&Date.now()-lastAct<10*60e3)fetchMS()},60000);
+setInterval(()=>{if(!document.hidden&&Date.now()-lastAct<10*60e3)fetchMS()},20000);
+setInterval(()=>{if(!document.hidden&&USER)fetchInbox()},60000);
 fetchMS();
 </script>
 <script data-goatcounter="https://prannya-kursant.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>

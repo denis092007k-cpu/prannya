@@ -358,11 +358,11 @@ function freeCount(B,mk,dk){
 function slotsWord(n){const a=n%10,b=n%100;return n+' '+(a===1&&b!==11?'вільний':a>=2&&a<=4&&(b<12||b>14)?'вільні':'вільних')}
 let lastView='';
 function drawSlots(){
- const box=$('slots');box.innerHTML='';drawStat();
+ const box=$('slots');box.innerHTML='';
  $('upd').hidden=!(db&&!loaded&&cached);
  if(db&&!loaded&&!cached){box.innerHTML='<div class="loading">Завантажую розклад…</div>';$('pc1').textContent=$('pc2').textContent='…';drawBar();return}
- const dk=dayKey(sel),nowM=nowMin(),mk=MK(),busyUntil=sel===0?busyMin():0;
- const B=build();let firstFree=null;
+ const dk=dayKey(sel),nowM=nowMin(),mk=MK();
+ const B=build();let firstFree=null;const busyUntil=sel===0?busyMin(B):0;const SH=sel===0?shiftAll(B,mk):null;drawStat(B);
  for(const p of ['1','2'])$('pc'+p).textContent=slotsWord(freeCount(B,M+p,dk));
  for(let m=OPEN;m<CLOSE;m+=STEP){
   const e=m+STEP;
@@ -374,12 +374,13 @@ function drawSlots(){
    const mine=!!USER&&e0.s.uid===USER.uid;
    b.className='slot '+(mine?'mine':'busy')+(past?' past':'');
    b.innerHTML='<span class="t">'+time+'</span><span class="w"></span>';
-   b.querySelector('.w').textContent=e0.s.hold?(mine?'↩ резерв (твій): повернеться, якщо пралка звільниться':'🔒 зарезервовано'):mine?'✓ '+e0.s.name+' (твій)':(e0.s.name||'без імені');
+   const sg=SH&&!e0.s.hold?SH.map.get(B.groups[e0.gid]):null;const shT=sg&&!sg.bump&&m===B.groups[e0.gid].a?' · ⏳ '+fmt(sg.start)+'–'+fmt(sg.start+(B.groups[e0.gid].b-B.groups[e0.gid].a)):sg&&sg.bump&&m===B.groups[e0.gid].a?' · ⏳ на завтра':'';
+   b.querySelector('.w').textContent=(e0.s.hold?(mine?'↩ резерв (твій): повернеться, якщо пралка звільниться':'🔒 зарезервовано'):mine?'✓ '+e0.s.name+' (твій)':(e0.s.name||'без імені'))+shT;
    b.onclick=()=>{if(past)say('Цей час уже минув: '+(e0.s.name||'без імені'));else if(mine)askCancel(B.groups[e0.gid]);else say('Цей час зайнятий: '+(e0.s.name||'без імені'),true)};
   }else{
    const on=pick&&m>=pick.a&&m<=pick.b;
    b.className='slot free'+(on?' sel':'')+(past?' past':'');
-   b.innerHTML='<span class="t">'+time+'</span><span class="w">'+(on?'✓ обрано':(busyUntil&&m<busyUntil&&!past?'вільно · пралка ще працює':'вільно'))+'</span>';
+   b.innerHTML='<span class="t">'+time+'</span><span class="w">'+(on?'✓ обрано':(busyUntil&&m<busyUntil&&!past?'вільно · пралка зайнята до '+fmt(busyUntil):'вільно'))+'</span>';
    b.onclick=()=>tap(m,past,B);
    if(!past&&firstFree===null)firstFree=b;
   }
@@ -425,24 +426,29 @@ function drawMine(B){
 
 /* ---- пралка не встигає: зсув часу (до 60 хв) або перенесення на завтра, ті самі правила, що на сервері ---- */
 const DMAX=60;
-function delayInfo(B,g){
- if(g.dk!==dayKey(0)||g.hold)return null;
- const st=msFor(g.mach);
- if(!st||(st.state!=='run'&&st.state!=='pause')||!st.finish)return null;
- const fin=msMin(st.finish),nm=nowMin(),sm=st.since?msMin(st.since):null;
+function shiftAll(B,mach){
+ const out={map:new Map(),end:0,fin:0};
+ const st=msFor(mach);
+ if(!st||(st.state!=='run'&&st.state!=='pause')||!st.finish)return out;
+ const fin=msMin(st.finish),nm=nowMin(),sm=st.since?msMin(st.since):null,today=dayKey(0);
  const isLegacy=x=>String(x.keys[0]).split('_')[2].length<=2;
- const gs=Object.values(B.groups).filter(x=>x.mach===g.mach&&x.dk===g.dk&&!x.hold).sort((x,y)=>x.a-y.a);
- let cur=fin;
+ const gs=Object.values(B.groups).filter(x=>x.mach===mach&&x.dk===today&&!x.hold).sort((x,y)=>x.a-y.a);
+ let cur=fin;out.fin=fin;out.end=fin;
  for(const x of gs){
   if(x.b<=nm)continue;
   if(!(nm<x.a||(sm!==null&&sm<x.a-3)))continue;
   const start=Math.max(x.a,cur),delay=start-x.a;
   const bump=delay>DMAX&&st.state==='run'&&!isLegacy(x);
-  if(x===g)return delay>=2?{fin:fin,start:start,delay:delay,bump:bump}:null;
+  if(delay>=2)out.map.set(x,{fin:fin,start:start,delay:delay,bump:bump});
   if(bump)continue;
   cur=start+(x.b-x.a);
+  if(delay>=2)out.end=Math.max(out.end,cur);
  }
- return null;
+ return out;
+}
+function delayInfo(B,g){
+ if(g.dk!==dayKey(0)||g.hold)return null;
+ return shiftAll(B,g.mach).map.get(g)||null;
 }
 function tap(m,past,B){
  if(!USER)return say('Спочатку увійди через Google.',true);
@@ -699,8 +705,8 @@ setInterval(drawSlots,60000);
 /* ===== Стан пралок (з Samsung через сервер) ===== */
 function msFor(mk){const s=MS&&MS[mk];return s&&!s.stale?s:null}
 function msMin(ms){const d=new Date(ms);return d.getHours()*60+d.getMinutes()}
-function busyMin(){const s=msFor(MK());return s&&(s.state==='run'||s.state==='pause')&&s.finish?msMin(s.finish):0}
-function drawStat(){
+function busyMin(B){const s=msFor(MK());if(!(s&&(s.state==='run'||s.state==='pause')&&s.finish))return 0;return Math.max(msMin(s.finish),B?shiftAll(B,MK()).end:0)}
+function drawStat(B){
  const el=$('mstat'),s=sel===0?msFor(MK()):null;
  if(!s){el.hidden=true;return}
  let ic,t,s1='',c;
@@ -713,6 +719,8 @@ function drawStat(){
  el.innerHTML='<span class="ic"></span><div class="tx"><span class="tt"></span><span class="s1"></span><small></small></div>';
  el.querySelector('.ic').textContent=ic;el.querySelector('.tt').textContent=t;el.querySelector('.s1').textContent=s1;el.querySelector('.s1').hidden=!s1;
  el.querySelector('small').textContent='Дані пралки, оновлено '+fmt(msMin(s.t));
+ const sa=(B&&(s.state==='run'||s.state==='pause'))?shiftAll(B,MK()):null;
+ if(sa&&sa.end>sa.fin){const x=document.createElement('span');x.className='s1';x.textContent='З урахуванням записів зайнята до '+fmt(sa.end);el.querySelector('.s1').after(x)}
  el.hidden=false;
 }
 /* ===== Сповіщення з програми (дзвіночок) ===== */

@@ -1,5 +1,5 @@
 /* Прання: офлайн-кеш і нагадування */
-const C = 'prannya-v2';
+const C = 'prannya-v3';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));
@@ -33,11 +33,14 @@ self.addEventListener('push', e => {
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Прання', {
     body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png',
-    tag: d.tag || 'prannya', renotify: true, data: { url: './' }
+    tag: d.tag || 'prannya', renotify: true,
+    data: { url: (typeof d.url === 'string' && /^https:\/\/prannya-push\.xeufqs\.workers\.dev\//.test(d.url)) ? d.url : './' }
   }));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const to = (e.notification.data && e.notification.data.url) || './';
+  if (to !== './') { e.waitUntil(clients.openWindow(to)); return; }
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
     for (const w of ws) if ('focus' in w) return w.focus();
     return clients.openWindow('./');

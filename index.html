@@ -109,6 +109,8 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 .mstat{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:14px;font-weight:700;line-height:1.35}
 .mstat.run{border-color:var(--a)}.mstat.free{border-color:var(--freeb)}.mstat.pause{border-color:#b8921f}
 .mstat small{display:block;font-weight:400;opacity:.75;font-size:12px}
+.mw{font-size:13px;line-height:1.4;background:var(--mine);color:var(--ink);border:1px solid #b8921f;border-radius:8px;padding:8px 10px;margin:2px 0 8px}
+.mw .lnk{display:block;width:100%;margin-top:6px;font-size:14px;padding:10px}
 /* ---- анімований гід встановлення ---- */
 .dlg .gd-tabs{display:flex;gap:6px;margin-bottom:12px}
 .dlg .gd-tabs button{flex:1;padding:9px 6px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-weight:700;font-size:14px}
@@ -393,7 +395,64 @@ function drawMine(B){
   go.onclick=()=>{if(off>=0&&off<DAYS){sel=off;M=g.mach[0];P=g.mach[1];ls.set('mach',M);ls.set('pr',P);pick=null;lastView='';drawMach();drawDays();drawSlots();$('mach').scrollIntoView({behavior:'smooth'})}};
   const x=document.createElement('button');x.className='lnk';x.textContent='Скасувати';x.onclick=()=>askCancel(g);
   row.appendChild(go);row.appendChild(x);l.appendChild(row);
+  const mv=moveInfo(B,g);
+  if(mv){
+   const w=document.createElement('div');w.className='mw';
+   const st=msFor(g.mach);
+   w.appendChild(document.createTextNode('⚠ Пралка '+(st&&st.state==='pause'?'на паузі':'ще працює')+', вільна орієнтовно о '+fmt(mv.fin)+'. Твій час '+fmt(g.a)+' не встигне.'));
+   if(mv.T!=null){
+    const bt=document.createElement('button');bt.className='lnk pri';bt.textContent='Перенести на '+fmt(mv.T)+' – '+fmt(mv.T+(g.b-g.a));
+    let armed=false,tm=null;
+    bt.onclick=()=>{
+     if(!armed){armed=true;bt.textContent='Підтвердити: '+fmt(mv.T)+' – '+fmt(mv.T+(g.b-g.a));clearTimeout(tm);tm=setTimeout(()=>{armed=false;bt.textContent='Перенести на '+fmt(mv.T)+' – '+fmt(mv.T+(g.b-g.a))},5000);return}
+     moveBooking(g,mv.T);
+    };
+    w.appendChild(bt);
+   }else w.appendChild(document.createTextNode(' Сьогодні вільного часу після цього немає: обери інший день або скасуй запис.'));
+   l.appendChild(w);
+  }
  });
+}
+
+/* ---- перенесення запису, коли пралка не встигає ---- */
+const ceil30=m=>Math.ceil(m/STEP)*STEP;
+function moveInfo(B,g){
+ if(g.dk!==dayKey(0))return null;
+ const st=msFor(g.mach);
+ if(!st||(st.state!=='run'&&st.state!=='pause')||!st.finish)return null;
+ const fin=msMin(st.finish),nm=nowMin();
+ const isLegacy=x=>String(x.keys[0]).split('_')[2].length<=2;
+ const gs=Object.values(B.groups).filter(x=>x.mach===g.mach&&x.dk===g.dk&&x.b>nm).sort((x,y)=>x.a-y.a);
+ const conf=gs.filter(x=>x.a>nm&&x.a<fin-1&&!isLegacy(x));
+ if(!conf.some(x=>x.keys[0]===g.keys[0]))return null;
+ const occ=new Set();
+ gs.forEach(x=>{if(!conf.includes(x))for(let m=x.a;m<x.b;m+=STEP)occ.add(m)});
+ let pos=ceil30(fin),T=null;
+ for(const x of conf){
+  const len=x.b-x.a;let t=pos,found=null;
+  while(t+len<=CLOSE){let ok=true;for(let m=t;m<t+len;m+=STEP)if(occ.has(m)){ok=false;break}if(ok){found=t;break}t+=STEP}
+  if(found!==null){for(let m=found;m<found+len;m+=STEP)occ.add(m);pos=found+len}
+  if(x.keys[0]===g.keys[0]){T=found;break}
+ }
+ if(T!==null&&T<g.b)T=null; // перекриття зі старим записом: безпечно перенести не можна
+ return{fin,T};
+}
+let moving=false;
+async function moveBooking(g,T){
+ if(moving||!db||!USER)return;moving=true;if(typeof goOn==='function')goOn();
+ const len=g.b-g.a,ts=Date.now();
+ const name=(data[g.keys[0]]&&data[g.keys[0]].name)||$('nm').value.trim()||'без імені';
+ const nk=[];for(let m=T;m<T+len;m+=STEP)nk.push(g.mach+'_'+g.dk+'_'+code(m));
+ const done=[];let fail=null;
+ try{for(const k of nk){const r=await db.ref('slots/'+k).transaction(cur=>cur?undefined:{name:name,uid:USER.uid,ts:ts},undefined,false);if(!r.committed){fail='taken';break}done.push(k)}}catch(e){fail=e.message||'error'}
+ if(fail){
+  await Promise.all(done.map(k=>db.ref('slots/'+k).remove().catch(()=>{})));
+  say(fail==='taken'?'Цей час щойно зайняли. Спробуй ще раз.':'Не вдалося перенести запис.',true);
+ }else{
+  try{await Promise.all(g.keys.map(k=>db.ref('slots/'+k).remove()));say('✓ Перенесено на '+fmt(T)+' – '+fmt(T+len))}
+  catch(e){say('Новий запис створено, але старий не видалився. Скасуй його вручну.',true)}
+ }
+ moving=false;drawSlots();
 }
 function tap(m,past,B){
  if(!USER)return say('Спочатку увійди через Google.',true);

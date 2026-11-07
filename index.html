@@ -121,6 +121,8 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 .ib .it2 b{display:block;font-size:15px}.ib .it2 span{display:block;font-size:14px;line-height:1.35;margin-top:2px}.ib .it2 small{display:block;font-size:12px;opacity:.65;margin-top:3px}
 .ib .it2.nw b::after{content:"нове";margin-left:8px;font-size:11px;background:var(--a);color:#fff;border-radius:8px;padding:1px 7px;vertical-align:middle}
 .ib .em{padding:18px 4px;text-align:center;opacity:.75;font-size:15px;line-height:1.4}
+.tokb{display:block;background:#b23a2a;color:#fff;font-weight:800;padding:12px 14px;border-radius:12px;margin:0 0 12px;text-decoration:none;line-height:1.35}.tokb small{display:block;font-weight:600;opacity:.9}.tokb[hidden]{display:none}
+.admb{display:block;width:100%;background:none;border:0;color:inherit;opacity:.55;font:inherit;font-size:13px;text-decoration:underline;padding:6px;margin-top:4px;cursor:pointer}.admb[hidden]{display:none}.admo{font-size:14px;text-align:center;margin-top:4px}
 .mw{font-size:13px;line-height:1.4;background:var(--mine);color:var(--ink);border:1px solid #b8921f;border-radius:8px;padding:8px 10px;margin:2px 0 8px}
 .mw .lnk{display:block;width:100%;margin-top:6px;font-size:14px;padding:10px}
 /* ---- анімований гід встановлення ---- */
@@ -190,6 +192,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 </head>
 <body data-m="m">
 <div class="hrow"><h1>Запис на прання</h1><button class="bell" id="bell" aria-label="Сповіщення">🔔<span class="bd" id="bd" hidden></span></button></div>
+<a class="tokb" id="tokb" hidden href="https://prannya-push.xeufqs.workers.dev/st/q" target="_blank" rel="noopener"></a>
 <p class="sub">Обери пралку й день, потім натисни початок і кінець часу (наприклад 13:30 і 14:30 = з 13:30 до 15:00). Один слот = 30 хв.</p>
 
 <div class="inst" id="inst" role="region" aria-label="Встановлення">
@@ -249,6 +252,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 <div class="ov" id="bov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="bdlg-h">
  <h2 id="bdlg-h">Сповіщення</h2>
  <div class="ib" id="ib"></div>
+ <button class="admb" id="admb" hidden>🔑 Я адміністратор: нагадування про токен Samsung</button><div class="admo" id="admo"></div>
  <div class="row"><button class="go" id="bdlg-ok">Закрити</button></div>
 </div></div>
 
@@ -696,7 +700,7 @@ else{
  document.addEventListener('visibilitychange',()=>{if(document.hidden)goOff();else goOn()});
  ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>window.addEventListener(ev,goOn,{passive:true}));
  goOn();
- firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush();fetchInbox()});
+ firebase.auth().onAuthStateChanged(u=>{USER=u;updAuth();cleanOld();syncPush();fetchInbox();regAdmin();drawTok()});
  db.ref('.info/connected').on('value',s=>{conn=!!s.val();netCheck()});
  db.ref('slots').on('value',snap=>{data=snap.val()||{};loaded=true;ls.set('slotsCache',JSON.stringify(data));drawSlots();cleanOld()},e=>say('Немає доступу до бази: '+e.message,true));
 }
@@ -730,6 +734,23 @@ function drawBell(){
  const n=INBOX.filter(x=>x.t>seenT()).length,bd=$('bd');
  bd.hidden=!n;bd.textContent=n>9?'9+':String(n);
 }
+function isAdm(){return !!(USER&&ls.get('admReg')===USER.uid)}
+async function regAdmin(key){
+ if(!USER||(!key&&(String(USER.email||'').toLowerCase()!=='xeufqs@gmail.com'||isAdm())))return false;
+ try{const token=await USER.getIdToken();const r=await fetch(PUSH_URL+'/adm',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,key:key||''})});const j=await r.json();if(j&&j.ok){ls.set('admReg',USER.uid);drawTok();return true}}catch(e){}
+ return false
+}
+let TOKEXP=null;
+function drawTok(){
+ const b=$('tokb');if(!b)return;
+ if(!isAdm()||!TOKEXP){b.hidden=true;return}
+ const left=TOKEXP-Date.now();
+ if(left>3*3600e3){b.hidden=true;return}
+ const m=Math.round(left/60000);
+ b.innerHTML='';const t=document.createElement('span');t.textContent=left>0?'🔑 Токен Samsung закінчується через '+(m>=60?Math.floor(m/60)+' год '+(m%60)+' хв':Math.max(1,m)+' хв'):'🔑 Токен Samsung закінчився: статус пралок не оновлюється';
+ const sm=document.createElement('small');sm.textContent='Натисни, щоб оновити (20 секунд) →';b.appendChild(t);b.appendChild(sm);b.hidden=false;
+}
+$('admb').onclick=async()=>{const k=prompt('Ключ доступу адміністратора');if(!k)return;$('admo').textContent='Зачекай…';const ok=await regAdmin(k.trim());$('admo').textContent=ok?'✓ Готово. Нагадування про токен приходитимуть на цей акаунт.':'Не вийшло: перевір ключ.';$('admb').hidden=ok};
 async function fetchInbox(){
  if(!USER){INBOX=[];drawBell();return}
  try{
@@ -746,12 +767,12 @@ function drawInbox(){
  INBOX.forEach(x=>{const d=document.createElement('div');d.className='it2'+(x.t>seen?' nw':'');
   d.innerHTML='<b></b><span></span><small></small>';d.querySelector('b').textContent=x.title;d.querySelector('span').textContent=x.body;d.querySelector('small').textContent=ago(x.t);box.appendChild(d)});
 }
-$('bell').onclick=async()=>{$('bov').style.display='flex';drawInbox();await fetchInbox();drawInbox();
+$('bell').onclick=async()=>{$('bov').style.display='flex';$('admb').hidden=!USER||isAdm();$('admo').textContent='';drawInbox();await fetchInbox();drawInbox();
  if(INBOX.length){ls.set('inboxSeen',String(Math.max.apply(null,INBOX.map(x=>x.t))));drawBell()}};
 $('bdlg-ok').onclick=()=>{$('bov').style.display='none';drawInbox();drawBell()};
 $('bov').onclick=e=>{if(e.target===$('bov'))$('bdlg-ok').onclick()};
 async function fetchMS(){
- try{const r=await fetch(PUSH_URL+'/machines');const j=await r.json();if(j&&j.ok&&j.m){MS=j.m;drawSlots()}}catch(e){}
+ try{const r=await fetch(PUSH_URL+'/machines');const j=await r.json();if(j&&j.ok){if('tokExp' in j)TOKEXP=j.tokExp;drawTok();if(j.m){MS=j.m;drawSlots()}}}catch(e){}
 }
 ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>window.addEventListener(ev,()=>{lastAct=Date.now()},{passive:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchMS()});

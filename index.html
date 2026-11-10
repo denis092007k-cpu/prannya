@@ -121,7 +121,8 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 .ib .it2 b{display:block;font-size:15px}.ib .it2 span{display:block;font-size:14px;line-height:1.35;margin-top:2px}.ib .it2 small{display:block;font-size:12px;opacity:.65;margin-top:3px}
 .ib .it2.nw b::after{content:"нове";margin-left:8px;font-size:11px;background:var(--a);color:#fff;border-radius:8px;padding:1px 7px;vertical-align:middle}
 .ib .em{padding:18px 4px;text-align:center;opacity:.75;font-size:15px;line-height:1.4}
-.tokb{display:block;background:#b23a2a;color:#fff;font-weight:800;padding:12px 14px;border-radius:12px;margin:0 0 12px;text-decoration:none;line-height:1.35}.tokb small{display:block;font-weight:600;opacity:.9}.tokb[hidden]{display:none}
+.tokb{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;text-align:left;font:inherit;cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--line);border-left:6px solid var(--freeb);font-weight:700;padding:11px 14px;border-radius:12px;margin:0 0 12px;line-height:1.3}.tokb .k{font-size:20px;flex:none}.tokb .tt{flex:1;min-width:0}.tokb small{display:block;font-weight:600;opacity:.75;font-size:13px}.tokb .go{font-size:13px;font-weight:700;opacity:.8;flex:none}.day.adm{position:relative}.admtag{display:block;font-size:10px;font-weight:700;margin-top:2px;opacity:.85}
+.tokb.warn{background:#b23a2a;color:#fff;border-color:#b23a2a;border-left-color:#7d2318}.tokb.warn small{opacity:.9}.tokb[hidden]{display:none}.tokdlg a.b,.tokdlg button{display:block;width:100%;box-sizing:border-box;text-align:center;font:inherit;font-weight:700;padding:14px;border-radius:12px;border:0;margin:8px 0;text-decoration:none;color:#fff}.tokdlg a.b{background:var(--a)}.tokdlg button.save{background:var(--freeb)}.tokdlg button.g{background:#5b6b78;font-weight:600;padding:11px}.tokdlg ol{padding-left:20px;margin:6px 0}.tokdlg li{margin:3px 0;font-size:14px}.tokdlg input{font:inherit;width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:2px solid var(--line);margin:6px 0;background:var(--card);color:var(--ink)}.tokdlg .st{background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-weight:700}.tokdlg #tout{font-weight:700;margin-top:6px}#tman{display:none}
 .admb{display:block;width:100%;background:none;border:0;color:inherit;opacity:.55;font:inherit;font-size:13px;text-decoration:underline;padding:6px;margin-top:4px;cursor:pointer}.admb[hidden]{display:none}.admo{font-size:14px;text-align:center;margin-top:4px}
 .mw{font-size:13px;line-height:1.4;background:var(--mine);color:var(--ink);border:1px solid #b8921f;border-radius:8px;padding:8px 10px;margin:2px 0 8px}
 .mw .lnk{display:block;width:100%;margin-top:6px;font-size:14px;padding:10px}
@@ -192,7 +193,7 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
 </head>
 <body data-m="m">
 <div class="hrow"><h1>Запис на прання</h1><button class="bell" id="bell" aria-label="Сповіщення">🔔<span class="bd" id="bd" hidden></span></button></div>
-<a class="tokb" id="tokb" hidden href="https://prannya-push.xeufqs.workers.dev/st/q" target="_blank" rel="noopener"></a>
+<button class="tokb" id="tokb" hidden></button>
 <p class="sub">Обери пралку й день, потім натисни початок і кінець часу (наприклад 13:30 і 14:30 = з 13:30 до 15:00). Один слот = 30 хв.</p>
 
 <div class="inst" id="inst" role="region" aria-label="Встановлення">
@@ -256,6 +257,15 @@ input{width:100%;padding:11px;margin-top:6px;border:2px solid var(--line);border
  <div class="row"><button class="go" id="bdlg-ok">Закрити</button></div>
 </div></div>
 
+<div class="ov" id="tov"><div class="dlg tokdlg" role="dialog" aria-modal="true" aria-labelledby="tdlg-h">
+ <h2 id="tdlg-h">🔑 Токен Samsung</h2>
+ <div class="st" id="tst"></div>
+ <a class="b" id="tcreate" href="https://account.smartthings.com/tokens/new" target="_blank" rel="noopener">1. Створити токен у Samsung</a>
+ <small>На сторінці Samsung:</small><ol><li>Назва: будь-яка, напр. <b>prannya</b></li><li>У розділі <b>Devices</b> — галочки <b>List all devices</b> і <b>Read one or all devices</b></li><li><b>Generate token</b> → іконка копіювання 📋</li><li>Повернись сюди</li></ol>
+ <button class="save" id="tpaste">2. Вставити токен і зберегти</button><div id="tout"></div>
+ <div id="tman"><small>Якщо не вставилось само — встав вручну:</small><input id="tin" placeholder="токен" autocomplete="off"><button class="g" id="tsave">Зберегти</button></div>
+ <div class="row"><button class="no" id="tdlg-x">Закрити</button></div>
+</div></div>
 <div class="ov" id="iov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="idlg-h">
  <h2 id="idlg-h">Як встановити</h2>
  <div id="idlg-b"></div>
@@ -285,6 +295,7 @@ const VAPID_PUB="BKNKwGZ6_owyucUHiAOggVUiDLTF-0t37zHuMMA0AZU2nKx0qbfuWD0mhRvyIHL
 const STEP=30;
 const OPEN=6*60+30,CLOSE=21*60; // запис з 06:30 до 21:00
 const DAYS=3;
+function nDays(){return isAdm()?4:3}
 const $=id=>document.getElementById(id);
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const wd=["нд","пн","вт","ср","чт","пт","сб"];
@@ -350,7 +361,8 @@ function build(){
 
 function drawDays(){
  $('days').innerHTML='';
- for(let i=0;i<DAYS;i++){const b=document.createElement('button');b.className='day'+(i===sel?' on':'');b.innerHTML=dayLabel(i);
+ const N=nDays();if(sel>=N)sel=0;
+ for(let i=0;i<N;i++){const b=document.createElement('button');b.className='day'+(i===sel?' on':'')+(i>=3?' adm':'');b.innerHTML=dayLabel(i)+(i>=3?'<span class="admtag">тільки ти</span>':'');
   b.onclick=()=>{sel=i;pick=null;drawDays();drawSlots()};$('days').appendChild(b)}
 }
 function nowMin(){const n=new Date();return n.getHours()*60+n.getMinutes()}
@@ -415,7 +427,7 @@ function drawMine(B){
   go.innerHTML='<b></b><span></span>';
   go.querySelector('b').textContent=(off===0?'Сьогодні':off===1?'Завтра':shortDate(g.dk))+', '+fmt(g.a)+' – '+fmt(g.b);
   go.querySelector('span').textContent=machName(g.mach)+(g.hold?' · резерв: повернеться, якщо пралка звільниться вчасно':'');
-  go.onclick=()=>{if(off>=0&&off<DAYS){sel=off;M=g.mach[0];P=g.mach[1];ls.set('mach',M);ls.set('pr',P);pick=null;lastView='';drawMach();drawDays();drawSlots();$('mach').scrollIntoView({behavior:'smooth'})}};
+  go.onclick=()=>{if(off>=0&&off<nDays()){sel=off;M=g.mach[0];P=g.mach[1];ls.set('mach',M);ls.set('pr',P);pick=null;lastView='';drawMach();drawDays();drawSlots();$('mach').scrollIntoView({behavior:'smooth'})}};
   const x=document.createElement('button');x.className='lnk';x.textContent='Скасувати';x.onclick=()=>askCancel(g);
   row.appendChild(go);row.appendChild(x);l.appendChild(row);
   const di=delayInfo(B,g);
@@ -737,19 +749,48 @@ function drawBell(){
 function isAdm(){return !!(USER&&ls.get('admReg')===USER.uid)}
 async function regAdmin(key){
  if(!USER||(!key&&(String(USER.email||'').toLowerCase()!=='xeufqs@gmail.com'||isAdm())))return false;
- try{const token=await USER.getIdToken();const r=await fetch(PUSH_URL+'/adm',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,key:key||''})});const j=await r.json();if(j&&j.ok){ls.set('admReg',USER.uid);drawTok();return true}}catch(e){}
+ try{const token=await USER.getIdToken();const r=await fetch(PUSH_URL+'/adm',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,key:key||''})});const j=await r.json();if(j&&j.ok){ls.set('admReg',USER.uid);drawTok();drawDays();return true}}catch(e){}
  return false
 }
 let TOKEXP=null;
+function tokHM(ms){const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+' год '+(m%60)+' хв':Math.max(1,m)+' хв'}
 function drawTok(){
  const b=$('tokb');if(!b)return;
- if(!isAdm()||!TOKEXP){b.hidden=true;return}
- const left=TOKEXP-Date.now();
- if(left>3*3600e3){b.hidden=true;return}
- const m=Math.round(left/60000);
- b.innerHTML='';const t=document.createElement('span');t.textContent=left>0?'🔑 Токен Samsung закінчується через '+(m>=60?Math.floor(m/60)+' год '+(m%60)+' хв':Math.max(1,m)+' хв'):'🔑 Токен Samsung закінчився: статус пралок не оновлюється';
- const sm=document.createElement('small');sm.textContent='Натисни, щоб оновити (20 секунд) →';b.appendChild(t);b.appendChild(sm);b.hidden=false;
+ if(!isAdm()){b.hidden=true;return}
+ const left=TOKEXP?TOKEXP-Date.now():-1;const warn=left<=3*3600e3;
+ b.className='tokb'+(warn?' warn':'');b.innerHTML='';
+ const k=document.createElement('span');k.className='k';k.textContent='🔑';
+ const tx=document.createElement('span');tx.className='tt';
+ const tt=document.createElement('b');const sm=document.createElement('small');
+ if(!TOKEXP||left<=0){tt.textContent='Токен Samsung закінчився';sm.textContent='Статус пралок не оновлюється — онови'}
+ else if(warn){tt.textContent='Токен закінчується через '+tokHM(left);sm.textContent='Онови, щоб статус не зник'}
+ else{tt.textContent='Токен ок · до '+hhmm(TOKEXP);sm.textContent='Можна оновити будь-коли'}
+ tx.appendChild(tt);tx.appendChild(sm);
+ const go=document.createElement('span');go.className='go';go.textContent='оновити →';
+ b.appendChild(k);b.appendChild(tx);b.appendChild(go);b.hidden=false;
 }
+function hhmm(ms){const d=new Date(ms);return p2(d.getHours())+':'+p2(d.getMinutes())}
+function tokStatus(){const el=$('tst');if(!el)return;const left=TOKEXP?TOKEXP-Date.now():-1;
+ el.style.color=left>0?'var(--freeb)':'var(--busyb)';
+ el.textContent=left>0?'✓ Токен діє ще '+tokHM(left)+' (до '+hhmm(TOKEXP)+')':'✗ Токен закінчився — онови';}
+function openTok(){$('tout').textContent='';$('tman').style.display='none';if($('tin'))$('tin').value='';tokStatus();$('tov').style.display='flex'}
+async function saveTok(t){t=(t||'').trim().replace(/^Bearer\s+/i,'');
+ if(t.length<20){$('tout').innerHTML='<span style="color:var(--busyb)">Це не схоже на токен. Скопіюй його ще раз у Samsung.</span>';$('tman').style.display='block';return}
+ if(!USER){$('tout').textContent='Спочатку увійди через Google.';return}
+ $('tout').textContent='Зберігаю…';
+ try{const token=await USER.getIdToken();
+  const r=await fetch(PUSH_URL+'/st/pat',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,pat:t})});
+  const j=await r.json();
+  if(j.ok){$('tout').innerHTML='<span style="color:var(--freeb)">✓ Готово! Пралки знову онлайн.</span>';$('tman').style.display='none';TOKEXP=j.exp;drawTok();tokStatus();fetchMS()}
+  else if(j.error==='key'){$('tout').innerHTML='<span style="color:var(--busyb)">Цей акаунт не адмін. Увійди своїм акаунтом.</span>'}
+  else{$('tout').innerHTML='<span style="color:var(--busyb)">Samsung не прийняв токен ('+(j.status||j.error)+'). Перевір галочки Devices і створи ще раз.</span>'}
+ }catch(e){$('tout').textContent='Помилка: '+e}
+}
+$('tokb').onclick=openTok;
+$('tdlg-x').onclick=()=>{$('tov').style.display='none'};
+$('tov').onclick=e=>{if(e.target===$('tov'))$('tov').style.display='none'};
+$('tpaste').onclick=()=>{if(!navigator.clipboard||!navigator.clipboard.readText){$('tman').style.display='block';$('tin').focus();return}navigator.clipboard.readText().then(saveTok).catch(()=>{$('tman').style.display='block';$('tin').focus()})};
+$('tsave').onclick=()=>saveTok($('tin').value);
 $('admb').onclick=async()=>{const k=prompt('Ключ доступу адміністратора');if(!k)return;$('admo').textContent='Зачекай…';const ok=await regAdmin(k.trim());$('admo').textContent=ok?'✓ Готово. Нагадування про токен приходитимуть на цей акаунт.':'Не вийшло: перевір ключ.';$('admb').hidden=ok};
 async function fetchInbox(){
  if(!USER){INBOX=[];drawBell();return}

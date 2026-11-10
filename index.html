@@ -773,18 +773,19 @@ function hhmm(ms){const d=new Date(ms);return p2(d.getHours())+':'+p2(d.getMinut
 function tokStatus(){const el=$('tst');if(!el)return;const left=TOKEXP?TOKEXP-Date.now():-1;
  el.style.color=left>0?'var(--freeb)':'var(--busyb)';
  el.textContent=left>0?'✓ Токен діє ще '+tokHM(left)+' (до '+hhmm(TOKEXP)+')':'✗ Токен закінчився — онови';}
-function openTok(){$('tout').textContent='';$('tman').style.display='none';if($('tin'))$('tin').value='';tokStatus();$('tov').style.display='flex'}
+function openTok(){$('tout').textContent='';$('tman').style.display='none';if($('tin'))$('tin').value='';tokStatus();$('tov').style.display='flex';fetchMS()}
 async function saveTok(t){t=(t||'').trim().replace(/^Bearer\s+/i,'');
  if(t.length<20){$('tout').innerHTML='<span style="color:var(--busyb)">Це не схоже на токен. Скопіюй його ще раз у Samsung.</span>';$('tman').style.display='block';return}
  if(!USER){$('tout').textContent='Спочатку увійди через Google.';return}
  $('tout').textContent='Зберігаю…';
- try{const token=await USER.getIdToken();
-  const r=await fetch(PUSH_URL+'/st/pat',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,pat:t})});
-  const j=await r.json();
-  if(j.ok){$('tout').innerHTML='<span style="color:var(--freeb)">✓ Готово! Пралки знову онлайн.</span>';$('tman').style.display='none';TOKEXP=j.exp;drawTok();tokStatus();fetchMS()}
-  else if(j.error==='key'){$('tout').innerHTML='<span style="color:var(--busyb)">Цей акаунт не адмін. Увійди своїм акаунтом.</span>'}
-  else{$('tout').innerHTML='<span style="color:var(--busyb)">Samsung не прийняв токен ('+(j.status||j.error)+'). Перевір галочки Devices і створи ще раз.</span>'}
- }catch(e){$('tout').textContent='Помилка: '+e}
+ let token=null;try{token=await USER.getIdToken()}catch(e){try{token=await USER.getIdToken(true)}catch(e2){}}
+ const post=async()=>{const r=await fetch(PUSH_URL+'/st/pat',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:token,pat:t})});return r.json()};
+ let j=null;
+ for(let i=0;i<2&&!j;i++){try{j=await post()}catch(e){if(i===0)await new Promise(r=>setTimeout(r,600))}}
+ if(!j){$('tout').innerHTML='Не вдалося зберегти звідси. Відкрий запасну сторінку: ';var a=document.createElement('a');a.href='https://prannya-push.xeufqs.workers.dev/st/q';a.target='_blank';a.rel='noopener';a.textContent='Оновити токен →';a.style.fontWeight='800';a.style.color='var(--a)';$('tout').appendChild(a);return}
+ if(j.ok){$('tout').innerHTML='<span style="color:var(--freeb)">✓ Готово! Пралки знову онлайн.</span>';$('tman').style.display='none';TOKEXP=j.exp;drawTok();tokStatus();fetchMS()}
+ else if(j.error==='key'){$('tout').innerHTML='<span style="color:var(--busyb)">Цей акаунт не адмін. Увійди своїм акаунтом.</span>'}
+ else{$('tout').innerHTML='<span style="color:var(--busyb)">Samsung не прийняв токен ('+(j.status||j.error)+'). Перевір галочки Devices і створи ще раз.</span>'}
 }
 $('tokb').onclick=openTok;
 $('tdlg-x').onclick=()=>{$('tov').style.display='none'};
